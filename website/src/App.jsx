@@ -300,7 +300,7 @@ export default function App() {
     const observerOptions = {
       root: null,
       rootMargin: '0px',
-      threshold: 0.1,
+      threshold: 0.01,
     };
 
     const observer = new IntersectionObserver((entries) => {
