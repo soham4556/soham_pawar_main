@@ -1956,7 +1956,7 @@ export function useExamTimer(initialSeconds, onTimeUp) {
             </div>
 
             <Link to="/estimator" className="btn-tech btn-outline" style={{ padding: '0.55rem 1.15rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-              Project Estimator (Get Quote)
+              Get Quote
             </Link>
             <a href="#contact" className="btn-tech btn-gradient" style={{ padding: '0.55rem 1.15rem', fontSize: '0.8rem' }}>Hire Me</a>
           </div>
