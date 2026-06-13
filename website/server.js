@@ -1,8 +1,14 @@
 import express from 'express';
 import handler from './api/submit-enquiry.js';
 
+try {
+  process.loadEnvFile();
+} catch (e) {
+  console.log('[API DEV INFO] No local .env file found. Relying on system/process environment variables.');
+}
+
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Mock request and response wrapper to match Vercel signature
 app.post('/api/submit-enquiry', async (req, res) => {

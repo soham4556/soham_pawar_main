@@ -20,10 +20,62 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { name, email, message } = req.body;
+  const {
+    name,
+    email,
+    phone,
+    company,
+    budget,
+    timeline,
+    message,
+    fileData,
+    fileName,
+    fileSize
+  } = req.body;
 
-  if (!name || !email || !message) {
-    return res.status(400).json({ error: 'Name, email, and message are required' });
+  if (!name || !email || !phone || !company || !message) {
+    return res.status(400).json({ error: 'Name, email, phone, company, and message are required' });
+  }
+
+  const budgetLabels = {
+    under_10k: 'Under ₹10,000',
+    '10k_25k': '₹10,000 - ₹25,000',
+    '25k_50k': '₹25,000 - ₹50,000',
+    over_50k: '₹50,000+ (Custom SaaS / System)'
+  };
+  const budgetDisplay = budgetLabels[budget] || budget || 'Not specified';
+
+  const timelineLabels = {
+    urgent: 'Urgent (< 2 weeks)',
+    '1month': '1 Month',
+    '2_3months': '2-3 Months',
+    flexible: 'Flexible / Long-term'
+  };
+  const timelineDisplay = timelineLabels[timeline] || timeline || 'Not specified';
+  const companyDisplay = company || 'Not specified';
+
+  // Fallback for missing local credentials during development
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn('\n⚠️  [API DEV WARNING] SMTP Credentials (EMAIL_USER & EMAIL_PASS) are missing in environment variables.');
+    console.log('📬 [API DEV] Logging Enquiry details:');
+    console.log(`- From Name: ${name}`);
+    console.log(`- From Email: ${email}`);
+    console.log(`- From Phone: ${phone}`);
+    console.log(`- Company: ${companyDisplay}`);
+    console.log(`- Budget: ${budgetDisplay}`);
+    console.log(`- Timeline: ${timelineDisplay}`);
+    console.log(`- Message: ${message}`);
+    if (fileData) {
+      console.log(`- Attached File: ${fileName} (${(fileSize / 1024).toFixed(1)} KB)`);
+    } else {
+      console.log('- Attached File: None');
+    }
+    console.log('==================================================\n');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Enquiry received! (Dev mode fallback: email logged to console)'
+    });
   }
 
   // Create SMTP Transporter with Gmail Service using environment variables
@@ -35,15 +87,16 @@ export default async function handler(req, res) {
     },
   });
 
-  const emailUser = process.env.EMAIL_USER || 'sohampawar1030@gmail.com';
+  const emailUser = process.env.EMAIL_USER;
 
   try {
     // 1. Email to Soham (Admin inquiry notification)
     const adminMailOptions = {
-      from: `"Soham Pawar Portfolio" <${emailUser}>`,
+      from: `"${name}" <${emailUser}>`,
       to: emailUser,
+      replyTo: email,
       subject: `🚀 New Project Inquiry: ${name}`,
-      text: `Hello Soham,\n\nYou have received a new project inquiry from your portfolio website:\n\nName: ${name}\nEmail: ${email}\nMessage: ${message}\n\nPlease respond to the client soon.`,
+      text: `Hello Soham,\n\nYou have received a new project inquiry from your portfolio website:\n\nName: ${name}\nEmail: ${email}\nPhone: ${phone}\nCompany: ${companyDisplay}\nBudget: ${budgetDisplay}\nTimeline: ${timelineDisplay}\nMessage: ${message}\n\nAttachment: ${fileName ? `${fileName} (${(fileSize / 1024).toFixed(1)} KB)` : 'None'}\n\nPlease respond to the client soon.`,
       html: `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 25px; color: #1e293b; background-color: #f8fafc; border-radius: 12px; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
           <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; border-bottom: 3px solid #06b6d4;">
@@ -54,12 +107,34 @@ export default async function handler(req, res) {
             <p style="font-size: 15px; margin-top: 0;">You have received a new inquiry from your portfolio website:</p>
             <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
               <tr>
-                <td style="padding: 10px 0; font-weight: bold; width: 120px; color: #475569; border-bottom: 1px solid #f1f5f9;">Name:</td>
+                <td style="padding: 10px 0; font-weight: bold; width: 150px; color: #475569; border-bottom: 1px solid #f1f5f9;">Name:</td>
                 <td style="padding: 10px 0; color: #0f172a; border-bottom: 1px solid #f1f5f9;">${name}</td>
               </tr>
               <tr>
                 <td style="padding: 10px 0; font-weight: bold; color: #475569; border-bottom: 1px solid #f1f5f9;">Email:</td>
                 <td style="padding: 10px 0; color: #06b6d4; border-bottom: 1px solid #f1f5f9;"><a href="mailto:${email}" style="color: #06b6d4; text-decoration: none;">${email}</a></td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; font-weight: bold; color: #475569; border-bottom: 1px solid #f1f5f9;">Phone:</td>
+                <td style="padding: 10px 0; color: #0f172a; border-bottom: 1px solid #f1f5f9;"><a href="tel:${phone}" style="color: #0f172a; text-decoration: none;">${phone}</a></td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; font-weight: bold; color: #475569; border-bottom: 1px solid #f1f5f9;">Company:</td>
+                <td style="padding: 10px 0; color: #0f172a; border-bottom: 1px solid #f1f5f9;">${companyDisplay}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; font-weight: bold; color: #475569; border-bottom: 1px solid #f1f5f9;">Estimated Budget:</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #10B981;">${budgetDisplay}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; font-weight: bold; color: #475569; border-bottom: 1px solid #f1f5f9;">Project Timeline:</td>
+                <td style="padding: 10px 0; color: #0f172a; border-bottom: 1px solid #f1f5f9;">${timelineDisplay}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; font-weight: bold; color: #475569; border-bottom: 1px solid #f1f5f9;">Attachment:</td>
+                <td style="padding: 10px 0; color: #0f172a; border-bottom: 1px solid #f1f5f9;">
+                  ${fileName ? `<span style="color: #3b82f6; font-family: monospace;">📁 ${fileName} (${(fileSize / 1024).toFixed(1)} KB)</span>` : '<span style="color: #94a3b8;">None</span>'}
+                </td>
               </tr>
               <tr>
                 <td style="padding: 10px 0; font-weight: bold; vertical-align: top; color: #475569; padding-top: 10px;">Message:</td>
@@ -72,6 +147,12 @@ export default async function handler(req, res) {
           </div>
         </div>
       `,
+      attachments: fileData ? [
+        {
+          filename: fileName || 'project-brief.pdf',
+          path: fileData
+        }
+      ] : []
     };
 
     // 2. Email to Client (Motivational, inspiring and professional thank you)
